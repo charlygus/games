@@ -123,11 +123,14 @@
             position: absolute;
             box-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
             cursor: pointer;
-            /* Evita el zoom accidental al tocar rápido en móviles */
             touch-action: none; 
         }
 
         /* --- Pantalla 3: Game Over --- */
+        #game-over-screen {
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+        }
         #game-over-screen h2 {
             font-size: 2.8rem;
             color: #ff3b30;
@@ -139,41 +142,78 @@
             margin-bottom: 40px;
         }
 
-        /* --- Pantalla 4: Sorpresa (Neón) --- */
+        /* --- Pantalla 4: Sorpresa Elegante --- */
         #surprise-screen {
             background-color: #050505;
             z-index: 10;
+            opacity: 0; 
+            transition: opacity 2s ease-in-out;
         }
-        .neon-title {
-            font-size: 3.2rem;
-            font-weight: 900;
-            color: #fff;
-            text-transform: uppercase;
-            line-height: 1.2;
-            margin-bottom: 30px;
-            text-shadow:
-                0 0 5px #fff,
-                0 0 10px #fff,
-                0 0 20px #ff00de,
-                0 0 40px #ff00de,
-                0 0 80px #ff00de;
-            animation: neon-pulse 1.5s infinite alternate;
+        
+        #surprise-screen.visible {
+            opacity: 1; 
         }
-        .neon-subtitle {
+
+        .surprise-card {
+            background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+            padding: 40px 30px;
+            border-radius: 20px;
+            border: 1px solid #333;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 20px rgba(255, 215, 0, 0.05);
+            transform: translateY(20px);
+            transition: transform 2s ease-out;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        #surprise-screen.visible .surprise-card {
+            transform: translateY(0); 
+        }
+
+        .surprise-img {
+            width: 100%;
+            max-width: 280px; 
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid rgba(255, 215, 0, 0.2); 
+        }
+
+        .elegant-title {
             font-size: 1.8rem;
-            font-weight: bold;
-            color: #ffd700;
+            color: #fff;
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+
+        .elegant-title strong {
+            font-size: 2.4rem;
+            color: #ffd700; 
+            font-weight: 800;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .elegant-subtitle {
+            font-size: 1.2rem;
+            color: #ccc;
             margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+            font-weight: normal;
         }
-        .neon-date {
-            font-size: 1.4rem;
-            color: #00ffff;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
-        }
-        @keyframes neon-pulse {
-            from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00de, 0 0 40px #ff00de; }
-            to { text-shadow: 0 0 2px #fff, 0 0 5px #fff, 0 0 10px #ff00de, 0 0 20px #ff00de; }
+
+        .elegant-date {
+            font-size: 1rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+            margin-top: 15px;
         }
 
         /* Confeti */
@@ -183,6 +223,7 @@
             height: 10px;
             animation: fall linear forwards;
             z-index: 5;
+            border-radius: 2px;
         }
         @keyframes fall {
             to { transform: translateY(110vh) rotate(720deg); }
@@ -214,9 +255,12 @@
     </div>
 
     <div id="surprise-screen" class="screen">
-        <div class="neon-title">NOS VAMOS<br>DE CONCIERTO</div>
-        <div class="neon-subtitle">Gira ‘Ya es Mañana Tour’<br>de Morat.</div>
-        <div class="neon-date">Valencia, 23 de Octubre.</div>
+        <div class="surprise-card">
+            <img src="cartel-morat.jpg" alt="Cartel Morat" class="surprise-img">
+            <div class="elegant-title">PREPÁRATE,<br>NOS VAMOS DE <strong>CONCIERTO</strong></div>
+            <div class="elegant-subtitle">Gira ‘Ya es Mañana Tour’ de Morat</div>
+            <div class="elegant-date">Valencia | 23 de Octubre</div>
+        </div>
     </div>
 
     <script>
@@ -274,6 +318,8 @@
             startScreen.classList.remove('active');
             gameOverScreen.classList.remove('active');
             surpriseScreen.classList.remove('active');
+            surpriseScreen.classList.remove('visible'); // Resetea la opacidad por si acaso
+            gameOverScreen.style.opacity = '1'; // Resetea la opacidad del game over
             gameScreen.classList.add('active');
             
             target.style.left = 'calc(50% - 35px)';
@@ -296,7 +342,7 @@
             target.style.top = randomY + 'px';
 
             // LÓGICA DE NIVELES Y VELOCIDAD
-            let speed = 1500; // Por defecto Sencillo
+            let speed = 1500; 
 
             if (score <= 7) {
                 levelDisplay.textContent = "Nivel: Sencillo";
@@ -313,23 +359,24 @@
             } else {
                 levelDisplay.textContent = "Nivel: Imposible";
                 levelDisplay.style.color = "#ff3b30";
-                // Si la trampa está activa y llegamos al 25, la velocidad es 0.3s
+                
                 if (isSurpriseMode) {
-                    speed = 300;
+                    speed = 200; // Súper rápido para forzar el fallo
                 } else {
-                    speed = 900; // Por si tú juegas en modo normal y pasas del 25
+                    speed = 900; 
                 }
             }
 
             targetTimeout = setTimeout(handleTimeout, speed);
         }
 
-        // Interacción con el círculo (Cubre ratón y táctil)
-        target.addEventListener('mousedown', (e) => { e.preventDefault(); handleTap(); });
-        target.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(); });
+        // Interacción con el círculo unificada
+        target.addEventListener('pointerdown', (e) => { 
+            e.preventDefault(); 
+            handleTap(); 
+        });
 
         function handleTap() {
-            // Primer toque: Arranca tiempo y desbloquea el canal de audio para iOS
             if (!isGameActive) {
                 isGameActive = true;
                 startHint.style.display = 'none';
@@ -350,20 +397,12 @@
 
             score++;
             scoreDisplay.textContent = score;
-
-            // DETONANTE: Toca el círculo 25 y armamos el audio para la sorpresa
-            if (isSurpriseMode && score === 25) {
-                song.volume = 1.0;
-                song.play().catch(e => console.log("Audio bloqueado", e));
-            }
-
             spawnTarget();
         }
 
         function handleTimeout() {
             isGameActive = false;
             
-            // Si la trampa está armada y perdió en el círculo rápido (25 puntos logrados)
             if (isSurpriseMode && score >= 25) {
                 triggerSurprise();
             } else {
@@ -374,24 +413,41 @@
         function showGameOver() {
             gameScreen.classList.remove('active');
             finalScoreDisplay.textContent = "Puntuación: " + score;
+            gameOverScreen.style.opacity = '1';
             gameOverScreen.classList.add('active');
         }
 
         function triggerSurprise() {
+            // 1. Mostrar Game Over falso
             gameScreen.classList.remove('active');
-            surpriseScreen.classList.add('active');
-            
-            // Por si el audio falló al tocar el 25, forzamos un segundo intento de Play
-            if (song.paused) {
-                song.volume = 1.0;
-                song.play().catch(e => console.log("Audio falló", e));
-            }
-            
-            launchConfetti();
+            finalScoreDisplay.textContent = "Puntuación: " + score;
+            gameOverScreen.style.opacity = '1';
+            gameOverScreen.classList.add('active');
+
+            // 2. Esperar y fundir a negro
+            setTimeout(() => {
+                gameOverScreen.style.opacity = '0';
+                
+                setTimeout(() => {
+                    gameOverScreen.classList.remove('active');
+                    surpriseScreen.classList.add('active');
+                    
+                    // 3. Aparece la tarjeta elegante y suena Morat
+                    setTimeout(() => {
+                        surpriseScreen.classList.add('visible');
+                        song.volume = 1.0;
+                        song.play().catch(e => console.log("El audio falló:", e));
+                        launchConfetti();
+                    }, 50);
+                    
+                }, 1000); 
+                
+            }, 2500); 
         }
 
         function launchConfetti() {
-            const colors = ['#FFC700', '#FF0000', '#2E3192', '#41BBC7', '#00FF00', '#ff00de'];
+            const colors = ['#FFD700', '#FFFFFF', '#DAA520', '#E0E0E0', '#CD7F32', '#222222'];
+            
             for (let i = 0; i < 120; i++) {
                 let confeti = document.createElement('div');
                 confeti.classList.add('confetti');
@@ -406,6 +462,10 @@
                 confeti.style.animationDelay = (Math.random() * 1) + 's';
                 
                 document.body.appendChild(confeti);
+
+                setTimeout(() => {
+                    confeti.remove();
+                }, 6000); 
             }
         }
     </script>
