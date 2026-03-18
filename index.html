@@ -7,7 +7,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Reflex Game">
-    
     <link rel="apple-touch-icon" href="icon.png">
 
     <title>Atrapa el Círculo</title>
@@ -40,6 +39,8 @@
             position: absolute;
             top: 0;
             left: 0;
+            text-align: center;
+            padding: 20px;
         }
         .active {
             display: flex;
@@ -47,18 +48,17 @@
 
         /* --- Pantalla 1: Inicio --- */
         #start-screen h1 {
-            font-size: 2.5rem;
+            font-size: 3rem;
             margin-bottom: 10px;
-            text-align: center;
         }
         #secret-trigger {
             color: #666;
             font-size: 1.2rem;
             margin-bottom: 50px;
-            padding: 15px;
+            padding: 20px;
             cursor: pointer;
         }
-        #play-btn {
+        .btn {
             background-color: #007aff;
             color: white;
             border: none;
@@ -67,35 +67,34 @@
             font-size: 1.5rem;
             font-weight: bold;
             cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4);
+        }
+        .btn:active {
+            transform: scale(0.95);
         }
 
         /* --- Pantalla 2: Juego --- */
         #score-display {
             position: absolute;
             top: 60px;
-            font-size: 3rem;
+            font-size: 3.5rem;
             font-weight: bold;
             color: rgba(255, 255, 255, 0.3);
             pointer-events: none;
         }
-        
-        /* Mensaje de espera antes de empezar */
         #start-hint {
             position: absolute;
-            top: 30%;
+            top: 25%;
             font-size: 1.2rem;
             color: #ffd700;
-            text-align: center;
             pointer-events: none;
             animation: pulse 1.5s infinite;
         }
-
         @keyframes pulse {
-            0% { opacity: 0.5; }
+            0% { opacity: 0.3; }
             50% { opacity: 1; }
-            100% { opacity: 0.5; }
+            100% { opacity: 0.3; }
         }
-
         #target {
             width: 70px;
             height: 70px;
@@ -103,45 +102,65 @@
             border-radius: 50%;
             position: absolute;
             box-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
-            transition: transform 0.1s;
             cursor: pointer;
         }
-        #target:active {
-            transform: scale(0.8);
-        }
 
-        /* --- Pantalla 3: Sorpresa --- */
-        #surprise-screen {
-            background-color: #000;
-            z-index: 10;
-            text-align: center;
-            padding: 20px;
-        }
-        #surprise-screen img {
-            max-width: 90%;
-            max-height: 45vh;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(255,255,255,0.2);
-            object-fit: cover;
-        }
-        #surprise-screen h2 {
-            font-size: 2.2rem;
-            color: #ffd700;
+        /* --- Pantalla 3: Game Over (Derrota normal) --- */
+        #game-over-screen h2 {
+            font-size: 2.5rem;
+            color: #ff3b30;
             margin-bottom: 10px;
         }
-        #surprise-screen p {
-            font-size: 1.2rem;
-            line-height: 1.5;
-            color: #eee;
+        #game-over-score {
+            font-size: 1.5rem;
+            color: #aaa;
+            margin-bottom: 40px;
         }
 
-        /* Confeti CSS */
+        /* --- Pantalla 4: Sorpresa (Neón y Música) --- */
+        #surprise-screen {
+            background-color: #050505;
+            z-index: 10;
+        }
+        .neon-title {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            line-height: 1.2;
+            margin-bottom: 30px;
+            text-shadow:
+                0 0 5px #fff,
+                0 0 10px #fff,
+                0 0 20px #ff00de,
+                0 0 40px #ff00de,
+                0 0 80px #ff00de;
+            animation: neon-pulse 1.5s infinite alternate;
+        }
+        .neon-subtitle {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        .neon-date {
+            font-size: 1.3rem;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        @keyframes neon-pulse {
+            from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00de, 0 0 40px #ff00de; }
+            to { text-shadow: 0 0 2px #fff, 0 0 5px #fff, 0 0 10px #ff00de, 0 0 20px #ff00de; }
+        }
+
+        /* Confeti */
         .confetti {
             position: absolute;
             width: 10px;
             height: 10px;
             animation: fall linear forwards;
+            z-index: 5;
         }
         @keyframes fall {
             to { transform: translateY(110vh) rotate(720deg); }
@@ -154,10 +173,8 @@
 
     <div id="start-screen" class="screen active">
         <h1>Atrapa el<br>Círculo</h1>
-        
         <div id="secret-trigger">Récord actual: 12</div>
-        
-        <button id="play-btn">JUGAR</button>
+        <button id="play-btn" class="btn">JUGAR</button>
     </div>
 
     <div id="game-screen" class="screen">
@@ -166,47 +183,61 @@
         <div id="target"></div>
     </div>
 
+    <div id="game-over-screen" class="screen">
+        <h2>¡Tiempo Agotado!</h2>
+        <div id="game-over-score">Puntuación: 0</div>
+        <button id="retry-btn" class="btn">Reintentar</button>
+    </div>
+
     <div id="surprise-screen" class="screen">
-        <img src="entradas.jpg" alt="Regalo de cumpleaños">
-        <h2>¡RÉCORD SUPERADO!</h2>
-        <p>Prepara las maletas que nos vamos de concierto. <br><br><b>¡Feliz Cumpleaños!</b></p>
+        <div class="neon-title">NOS VAMOS<br>DE CONCIERTO</div>
+        <div class="neon-subtitle">Gira ‘Ya es Mañana Tour’<br>de Morat.</div>
+        <div class="neon-date">Valencia, 23 de Octubre.</div>
     </div>
 
     <script>
         // Variables de estado
         let score = 0;
         let isSurpriseMode = false;
-        let isGameActive = false; // Nueva variable para controlar la pausa inicial
+        let isGameActive = false;
         let targetTimeout;
+        let audioUnlocked = false; // Para engañar al iPhone con el sonido
 
         // Elementos del DOM
         const startScreen = document.getElementById('start-screen');
         const gameScreen = document.getElementById('game-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
         const surpriseScreen = document.getElementById('surprise-screen');
         const target = document.getElementById('target');
         const scoreDisplay = document.getElementById('score-display');
+        const finalScoreDisplay = document.getElementById('game-over-score');
         const playBtn = document.getElementById('play-btn');
+        const retryBtn = document.getElementById('retry-btn');
         const secretTrigger = document.getElementById('secret-trigger');
         const song = document.getElementById('birthday-song');
         const startHint = document.getElementById('start-hint');
 
-        // Partida normal (Juegas tú)
+        // Eventos Botones Menú
         playBtn.addEventListener('click', () => {
             isSurpriseMode = false;
             initGameReadyState();
         });
 
-        // Partida trucada (Juega ella)
+        retryBtn.addEventListener('click', () => {
+            // Reintentar mantiene el modo en el que estábamos (trampa o normal)
+            initGameReadyState();
+        });
+
+        // Evento Truco (Armar la trampa)
         secretTrigger.addEventListener('click', () => {
             isSurpriseMode = true;
-            secretTrigger.style.color = "white";
+            secretTrigger.style.color = "white"; // Chivato visual
             setTimeout(() => {
                 secretTrigger.style.color = "#666";
                 initGameReadyState();
             }, 150);
         });
 
-        // Prepara el tablero pero NO arranca el tiempo aún
         function initGameReadyState() {
             song.pause();
             song.currentTime = 0;
@@ -215,18 +246,19 @@
             scoreDisplay.textContent = score;
             isGameActive = false;
             
-            // Mostrar texto de ayuda
             startHint.style.display = 'block';
             
+            // Ocultar todas las pantallas y mostrar solo el juego
             startScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            surpriseScreen.classList.remove('active');
             gameScreen.classList.add('active');
             
-            // Colocar el círculo en el centro de la pantalla
+            // Círculo al centro
             target.style.left = 'calc(50% - 35px)';
             target.style.top = 'calc(50% - 35px)';
         }
 
-        // Arranca el movimiento y el temporizador
         function spawnTarget() {
             clearTimeout(targetTimeout);
 
@@ -240,20 +272,38 @@
             target.style.left = randomX + 'px';
             target.style.top = randomY + 'px';
 
+            // LÓGICA DE VELOCIDAD
+            // Si el truco está activo y llega a 12 puntos, la velocidad es imposible (400ms)
+            let speed = 1200; 
+            if (isSurpriseMode && score >= 12) {
+                speed = 400; // Imposible atraparlo
+            }
+
+            // Cuando se agota el tiempo, salta el Game Over o la Sorpresa
             targetTimeout = setTimeout(() => {
-                endGame();
-            }, 1200); // 1.2 segundos para atrapar el círculo
+                handleTimeout();
+            }, speed);
         }
 
-        // Eventos de interacción
+        // Interacción con el círculo
         target.addEventListener('mousedown', (e) => { e.preventDefault(); handleTap(); });
         target.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(); });
 
         function handleTap() {
-            // Si el juego estaba pausado esperando el primer toque, arranca ahora
+            // Primer toque: Arrancar juego y desbloquear audio en iPhone
             if (!isGameActive) {
                 isGameActive = true;
-                startHint.style.display = 'none'; // Ocultar el texto
+                startHint.style.display = 'none';
+                
+                // Truco de iOS: Reproducir y pausar audio rápido en el primer toque
+                if (!audioUnlocked) {
+                    song.play().then(() => {
+                        song.pause();
+                        song.currentTime = 0;
+                        audioUnlocked = true;
+                    }).catch(() => {});
+                }
+
                 score = 1;
                 scoreDisplay.textContent = score;
                 spawnTarget();
@@ -262,33 +312,40 @@
 
             score++;
             scoreDisplay.textContent = score;
+            spawnTarget();
+        }
+
+        // Qué pasa cuando se agota el tiempo del círculo
+        function handleTimeout() {
+            isGameActive = false;
             
-            // Lógica de sorpresa en el toque 10
-            if (isSurpriseMode && score >= 10) {
-                clearTimeout(targetTimeout);
-                song.play(); // El audio arranca gracias al toque físico
+            // Si estaba la trampa armada y perdió en el nivel súper rápido (>= 12)
+            if (isSurpriseMode && score >= 12) {
                 triggerSurprise();
             } else {
-                spawnTarget();
+                // Si perdió de forma natural (antes del 12)
+                showGameOver();
             }
         }
 
-        function endGame() {
-            clearTimeout(targetTimeout);
-            isGameActive = false;
+        function showGameOver() {
             gameScreen.classList.remove('active');
-            startScreen.classList.add('active');
+            finalScoreDisplay.textContent = "Puntuación: " + score;
+            gameOverScreen.classList.add('active');
         }
 
         function triggerSurprise() {
             gameScreen.classList.remove('active');
             surpriseScreen.classList.add('active');
+            
+            // Lanza la canción y el confeti
+            song.play().catch(e => console.log("Audio no pudo iniciar", e));
             launchConfetti();
         }
 
         function launchConfetti() {
-            const colors = ['#FFC700', '#FF0000', '#2E3192', '#41BBC7', '#00FF00'];
-            for (let i = 0; i < 80; i++) {
+            const colors = ['#FFC700', '#FF0000', '#2E3192', '#41BBC7', '#00FF00', '#ff00de'];
+            for (let i = 0; i < 100; i++) {
                 let confeti = document.createElement('div');
                 confeti.classList.add('confetti');
                 confeti.style.left = Math.random() * 100 + 'vw';
