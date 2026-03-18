@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -6,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Reflex Game">
     
-    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/charlygus/games/main/icon.png">
 
     <title>Atrapa el Círculo</title>
     <style>
@@ -234,3 +236,261 @@
         }
     </style>
 </head>
+<body>
+
+    <audio id="birthday-song" src="cancion.mp3" preload="auto"></audio>
+
+    <div id="start-screen" class="screen active">
+        <h1>Atrapa el<br>Círculo</h1>
+        <div id="secret-trigger">Récord actual: 12</div>
+        <button id="play-btn" class="btn">JUGAR</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div id="level-display">Nivel: Sencillo</div>
+        <div id="score-display">0</div>
+        <div id="start-hint">Toca el círculo para empezar</div>
+        <div id="target"></div>
+    </div>
+
+    <div id="game-over-screen" class="screen">
+        <h2>¡Tiempo Agotado!</h2>
+        <div id="game-over-score">Puntuación: 0</div>
+        <button id="retry-btn" class="btn">Reintentar</button>
+        <button id="menu-btn" class="btn btn-secondary">Volver al Menú</button>
+    </div>
+
+    <div id="surprise-screen" class="screen">
+        <div class="surprise-card">
+            <img src="https://raw.githubusercontent.com/charlygus/games/main/imagen.webp" alt="Cartel Morat" class="surprise-img">
+            <div class="elegant-title">PREPÁRATE,<br>NOS VAMOS DE <strong>CONCIERTO</strong></div>
+            <div class="elegant-subtitle">Gira ‘Ya es Mañana Tour’ de Morat</div>
+            <div class="elegant-date">Valencia | 23 de Octubre</div>
+        </div>
+    </div>
+
+    <script>
+        // Variables
+        let score = 0;
+        let isSurpriseMode = false;
+        let isGameActive = false;
+        let targetTimeout;
+        let audioUnlocked = false;
+        let isTransitioning = false; 
+
+        // Elementos DOM
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const surpriseScreen = document.getElementById('surprise-screen');
+        const target = document.getElementById('target');
+        const scoreDisplay = document.getElementById('score-display');
+        const levelDisplay = document.getElementById('level-display');
+        const finalScoreDisplay = document.getElementById('game-over-score');
+        const playBtn = document.getElementById('play-btn');
+        const retryBtn = document.getElementById('retry-btn');
+        const menuBtn = document.getElementById('menu-btn');
+        const secretTrigger = document.getElementById('secret-trigger');
+        const song = document.getElementById('birthday-song');
+        const startHint = document.getElementById('start-hint');
+
+        // BOTÓN TRUCO: Activa/Desactiva el modo y se pone Rojo
+        secretTrigger.addEventListener('click', () => {
+            isSurpriseMode = !isSurpriseMode;
+            secretTrigger.style.color = isSurpriseMode ? "#ff3b30" : "#666";
+        });
+
+        // BOTONES DE MENÚ
+        playBtn.addEventListener('click', initGameReadyState);
+        retryBtn.addEventListener('click', () => {
+            if(!isTransitioning) initGameReadyState();
+        });
+        
+        menuBtn.addEventListener('click', () => {
+            if(!isTransitioning) {
+                gameOverScreen.classList.remove('active');
+                startScreen.classList.add('active');
+            }
+        });
+
+        // Preparar la partida (Reseteo profundo)
+        function initGameReadyState() {
+            clearTimeout(targetTimeout);
+            isTransitioning = false;
+            
+            song.pause();
+            song.currentTime = 0;
+            
+            score = 0;
+            scoreDisplay.textContent = score;
+            levelDisplay.textContent = "Nivel: Sencillo";
+            levelDisplay.style.color = "#ffd700";
+            isGameActive = false;
+            
+            startHint.style.display = 'block';
+            
+            startScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            surpriseScreen.classList.remove('active');
+            surpriseScreen.classList.remove('visible'); 
+            gameOverScreen.style.opacity = '1'; 
+            gameScreen.classList.add('active');
+            
+            // Centramos el círculo inicialmente
+            target.style.left = 'calc(50% - 35px)';
+            target.style.top = 'calc(50% - 35px)';
+        }
+
+        function spawnTarget() {
+            clearTimeout(targetTimeout);
+
+            // CÁLCULO SEGURO DE MÁRGENES (Evita la isla dinámica y bordes)
+            const targetSize = 70;
+            const safeMarginTop = 160; 
+            const safeMarginBottom = 60; 
+            const safeMarginX = 20; 
+
+            const maxX = window.innerWidth - targetSize - safeMarginX;
+            const maxY = window.innerHeight - targetSize - safeMarginBottom;
+
+            const randomX = Math.max(safeMarginX, Math.floor(Math.random() * maxX));
+            const randomY = Math.max(safeMarginTop, Math.floor(Math.random() * maxY));
+
+            target.style.left = randomX + 'px';
+            target.style.top = randomY + 'px';
+
+            // LÓGICA DE NIVELES Y VELOCIDAD
+            let speed = 1500; 
+
+            if (score <= 7) {
+                levelDisplay.textContent = "Nivel: Sencillo";
+                levelDisplay.style.color = "#00ff00";
+                speed = 1500;
+            } else if (score <= 15) {
+                levelDisplay.textContent = "Nivel: Medio";
+                levelDisplay.style.color = "#ffd700";
+                speed = 1300;
+            } else if (score <= 24) {
+                levelDisplay.textContent = "Nivel: Extremo";
+                levelDisplay.style.color = "#ff8c00";
+                speed = 1100;
+            } else {
+                levelDisplay.textContent = "Nivel: Imposible";
+                levelDisplay.style.color = "#ff3b30";
+                
+                if (isSurpriseMode) {
+                    speed = 200; 
+                } else {
+                    speed = 900; 
+                }
+            }
+
+            targetTimeout = setTimeout(handleTimeout, speed);
+        }
+
+        target.addEventListener('pointerdown', (e) => { 
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            handleTap(); 
+        });
+
+        function handleTap() {
+            if (!isGameActive) {
+                isGameActive = true;
+                startHint.style.display = 'none';
+                
+                // BLINDAJE DE AUDIO iOS: Usamos mute para que el desbloqueo sea 100% silencioso
+                if (!audioUnlocked) {
+                    song.muted = true; 
+                    song.play().then(() => {
+                        song.pause();
+                        song.currentTime = 0;
+                        audioUnlocked = true;
+                    }).catch(() => {});
+                }
+
+                score = 1;
+                scoreDisplay.textContent = score;
+                spawnTarget();
+                return;
+            }
+
+            score++;
+            scoreDisplay.textContent = score;
+            spawnTarget();
+        }
+
+        function handleTimeout() {
+            isGameActive = false;
+            
+            if (isSurpriseMode && score >= 25) {
+                triggerSurprise();
+            } else {
+                showGameOver();
+            }
+        }
+
+        function showGameOver() {
+            gameScreen.classList.remove('active');
+            finalScoreDisplay.textContent = "Puntuación: " + score;
+            gameOverScreen.style.opacity = '1';
+            gameOverScreen.classList.add('active');
+        }
+
+        function triggerSurprise() {
+            isTransitioning = true; 
+            
+            gameScreen.classList.remove('active');
+            finalScoreDisplay.textContent = "Puntuación: " + score;
+            gameOverScreen.style.opacity = '1';
+            gameOverScreen.classList.add('active');
+
+            setTimeout(() => {
+                gameOverScreen.style.opacity = '0';
+                
+                setTimeout(() => {
+                    gameOverScreen.classList.remove('active');
+                    surpriseScreen.classList.add('active');
+                    
+                    setTimeout(() => {
+                        surpriseScreen.classList.add('visible');
+                        
+                        // DEVOLVEMOS EL SONIDO: Quitamos el mute para que suene la sorpresa
+                        song.muted = false; 
+                        song.volume = 1.0; 
+                        song.play().catch(e => console.log("El audio falló:", e));
+                        
+                        launchConfetti();
+                    }, 50);
+                    
+                }, 1000); 
+                
+            }, 2500); 
+        }
+
+        function launchConfetti() {
+            const colors = ['#FFD700', '#FFFFFF', '#DAA520', '#E0E0E0', '#CD7F32', '#222222'];
+            
+            for (let i = 0; i < 120; i++) {
+                let confeti = document.createElement('div');
+                confeti.classList.add('confetti');
+                confeti.style.left = Math.random() * 100 + 'vw';
+                confeti.style.top = -20 + 'px';
+                confeti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                let size = Math.random() * 8 + 6;
+                confeti.style.width = size + 'px';
+                confeti.style.height = size + 'px';
+                confeti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                confeti.style.animationDelay = (Math.random() * 1) + 's';
+                
+                document.body.appendChild(confeti);
+
+                setTimeout(() => {
+                    confeti.remove();
+                }, 6000); 
+            }
+        }
+    </script>
+</body>
+</html>
