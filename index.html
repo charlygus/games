@@ -256,7 +256,7 @@
 
     <div id="surprise-screen" class="screen">
         <div class="surprise-card">
-            <img src="cartel-morat.jpg" alt="Cartel Morat" class="surprise-img">
+            <img src="https://raw.githubusercontent.com/charlygus/games/main/imagen.webp" alt="Cartel Morat" class="surprise-img">
             <div class="elegant-title">PREPÁRATE,<br>NOS VAMOS DE <strong>CONCIERTO</strong></div>
             <div class="elegant-subtitle">Gira ‘Ya es Mañana Tour’ de Morat</div>
             <div class="elegant-date">Valencia | 23 de Octubre</div>
@@ -318,8 +318,8 @@
             startScreen.classList.remove('active');
             gameOverScreen.classList.remove('active');
             surpriseScreen.classList.remove('active');
-            surpriseScreen.classList.remove('visible'); // Resetea la opacidad por si acaso
-            gameOverScreen.style.opacity = '1'; // Resetea la opacidad del game over
+            surpriseScreen.classList.remove('visible'); 
+            gameOverScreen.style.opacity = '1'; 
             gameScreen.classList.add('active');
             
             target.style.left = 'calc(50% - 35px)';
