@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,11 +11,13 @@
 
     <title>Atrapa el Círculo</title>
     <style>
+        /* Bloqueo estricto de selección de texto y gestos nativos */
         * {
             box-sizing: border-box;
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
             margin: 0;
@@ -26,7 +28,8 @@
             overflow: hidden;
             width: 100vw;
             height: 100vh;
-            touch-action: manipulation;
+            /* touch-action: none evita el pull-to-refresh y el pinch-to-zoom */
+            touch-action: none; 
         }
         
         .screen {
@@ -88,7 +91,8 @@
         /* --- Pantalla 2: Juego --- */
         #level-display {
             position: absolute;
-            top: 30px;
+            top: env(safe-area-inset-top, 30px);
+            margin-top: 20px;
             font-size: 1.5rem;
             font-weight: bold;
             color: #ffd700;
@@ -96,7 +100,8 @@
         }
         #score-display {
             position: absolute;
-            top: 70px;
+            top: env(safe-area-inset-top, 70px);
+            margin-top: 50px;
             font-size: 4rem;
             font-weight: bold;
             color: rgba(255, 255, 255, 0.2);
@@ -104,7 +109,7 @@
         }
         #start-hint {
             position: absolute;
-            top: 25%;
+            top: 30%;
             font-size: 1.2rem;
             color: #fff;
             pointer-events: none;
@@ -270,6 +275,7 @@
         let isGameActive = false;
         let targetTimeout;
         let audioUnlocked = false;
+        let isTransitioning = false; // Evita que se toquen botones durante el fundido
 
         // Elementos DOM
         const startScreen = document.getElementById('start-screen');
@@ -295,15 +301,22 @@
 
         // BOTONES DE MENÚ
         playBtn.addEventListener('click', initGameReadyState);
-        retryBtn.addEventListener('click', initGameReadyState);
+        retryBtn.addEventListener('click', () => {
+            if(!isTransitioning) initGameReadyState();
+        });
         
         menuBtn.addEventListener('click', () => {
-            gameOverScreen.classList.remove('active');
-            startScreen.classList.add('active');
+            if(!isTransitioning) {
+                gameOverScreen.classList.remove('active');
+                startScreen.classList.add('active');
+            }
         });
 
-        // Preparar la partida
+        // Preparar la partida (Reseteo profundo)
         function initGameReadyState() {
+            clearTimeout(targetTimeout);
+            isTransitioning = false;
+            
             song.pause();
             song.currentTime = 0;
             
@@ -322,6 +335,7 @@
             gameOverScreen.style.opacity = '1'; 
             gameScreen.classList.add('active');
             
+            // Centramos el círculo inicialmente
             target.style.left = 'calc(50% - 35px)';
             target.style.top = 'calc(50% - 35px)';
         }
@@ -329,14 +343,18 @@
         function spawnTarget() {
             clearTimeout(targetTimeout);
 
-            // Evitar bordes y textos
-            const safeMarginX = 80; 
-            const safeMarginY = 120;
-            const maxX = window.innerWidth - safeMarginX;
-            const maxY = window.innerHeight - safeMarginY;
+            // CÁLCULO SEGURO DE MÁRGENES (Evita la isla dinámica y bordes)
+            const targetSize = 70;
+            const safeMarginTop = 160; // Deja espacio para los textos de puntuación
+            const safeMarginBottom = 60; // Deja espacio para la barra home de iOS
+            const safeMarginX = 20; // Margen lateral
 
-            const randomX = Math.floor(Math.random() * (maxX - 20)) + 10;
-            const randomY = Math.floor(Math.random() * (maxY - 100)) + 100; 
+            const maxX = window.innerWidth - targetSize - safeMarginX;
+            const maxY = window.innerHeight - targetSize - safeMarginBottom;
+
+            // Math.max asegura que nunca sea menor que el margen seguro
+            const randomX = Math.max(safeMarginX, Math.floor(Math.random() * maxX));
+            const randomY = Math.max(safeMarginTop, Math.floor(Math.random() * maxY));
 
             target.style.left = randomX + 'px';
             target.style.top = randomY + 'px';
@@ -370,9 +388,10 @@
             targetTimeout = setTimeout(handleTimeout, speed);
         }
 
-        // Interacción con el círculo unificada
+        // Interacción unificada y bloqueada para evitar comportamientos raros
         target.addEventListener('pointerdown', (e) => { 
             e.preventDefault(); 
+            e.stopPropagation(); // Evita que el evento "burbujee" al fondo
             handleTap(); 
         });
 
@@ -381,7 +400,9 @@
                 isGameActive = true;
                 startHint.style.display = 'none';
                 
+                // BLINDAJE DE AUDIO: Truco de volumen 0 para que no se escuche NADA
                 if (!audioUnlocked) {
+                    song.volume = 0; 
                     song.play().then(() => {
                         song.pause();
                         song.currentTime = 0;
@@ -403,6 +424,7 @@
         function handleTimeout() {
             isGameActive = false;
             
+            // Condición estricta: Solo salta si tiene el modo trampa Y ha llegado a 25
             if (isSurpriseMode && score >= 25) {
                 triggerSurprise();
             } else {
@@ -418,6 +440,8 @@
         }
 
         function triggerSurprise() {
+            isTransitioning = true; // Bloquea los botones de reintentar
+            
             // 1. Mostrar Game Over falso
             gameScreen.classList.remove('active');
             finalScoreDisplay.textContent = "Puntuación: " + score;
@@ -432,17 +456,17 @@
                     gameOverScreen.classList.remove('active');
                     surpriseScreen.classList.add('active');
                     
-                    // 3. Aparece la tarjeta elegante y suena Morat
+                    // 3. Aparece la tarjeta elegante y AQUÍ le damos volumen a Morat
                     setTimeout(() => {
                         surpriseScreen.classList.add('visible');
-                        song.volume = 1.0;
+                        song.volume = 1.0; // Le devolvemos la voz
                         song.play().catch(e => console.log("El audio falló:", e));
                         launchConfetti();
                     }, 50);
                     
-                }, 1000); 
+                }, 1000); // Duración del fundido a negro
                 
-            }, 2500); 
+            }, 2500); // Tiempo que ve la pantalla de Game Over antes de la magia
         }
 
         function launchConfetti() {
