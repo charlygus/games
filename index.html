@@ -1,1 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Reflex Game">
+    
+    <link rel="apple-touch-icon" href="icon.png">
 
+    <title>Atrapa el Círculo</title>
+    <style>
+        /* Estilos generales y bloqueo de interacciones no deseadas */
+        * {
+            box-sizing: border-box;
+            -webkit-user-select: none; /* Evita que se seleccione el texto */
+            user-select: none;
+            -webkit-touch-callout: none; /* Evita el menú contextual al mantener pulsado */
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; /* Evita el scroll */
+            width: 100vw;
+            height: 100vh;
+            touch-action: manipulation; /* Evita el zoom con doble toque */
+        }
+        
+        /* Sistema de Vistas */
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .active {
+            display: flex;
+        }
+
+        /* --- Pantalla 1: Inicio --- */
+        #start-screen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #secret-trigger {
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 50px;
+            padding: 15px; /* Área invisible más grande para facilitar tu toque */
+        }
+        #play-btn {
+            background-color: #007aff; /* Azul estilo iOS */
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* --- Pantalla 2: Juego --- */
+        #score-display {
+            position: absolute;
+            top: 60px;
+            font-size: 3rem;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+        }
+        #target {
+            width: 70px;
+            height: 70px;
+            background-color: #ff3b30; /* Rojo estilo iOS */
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
+            transition: transform 0.1s;
+        }
+        #target:active {
+            transform: scale(0.8);
+        }
+
+        /* --- Pantalla 3: Sorpresa --- */
+        #surprise-screen {
+            background-color: #000;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+        }
+        #surprise-screen img {
+            max-width: 90%;
+            max-height: 45vh;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(255,255,255,0.2);
+            object-fit: cover;
+        }
+        #surprise-screen h2 {
+            font-size: 2.2rem;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        #surprise-screen p {
+            font-size: 1.2rem;
+            line-height: 1.5;
+            color: #eee;
+        }
+
+        /* Confeti CSS */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(720deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen" class="screen active">
+        <h1>Atrapa el<br>Círculo</h1>
+        
+        <div id="secret-trigger">Récord actual: 12</div>
+        
+        <button id="play-btn">JUGAR</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div id="score-display">0</div>
+        <div id="target"></div>
+    </div>
+
+    <div id="surprise-screen" class="screen">
+        <img src="entradas.jpg" alt="Regalo" onerror="this.src='https://via.placeholder.com/400x300?text=Foto+Entradas'">
+        <h2>¡RÉCORD SUPERADO!</h2>
+        <p>Prepara las maletas que nos vamos de concierto. <br><br><b>¡Feliz Cumpleaños!</b></p>
+    </div>
+
+    <script>
+        // Variables de estado
+        let score = 0;
+        let isSurpriseMode = false;
+        let targetTimeout;
+
+        // Elementos del DOM
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const surpriseScreen = document.getElementById('surprise-screen');
+        const target = document.getElementById('target');
+        const scoreDisplay = document.getElementById('score-display');
+        const playBtn = document.getElementById('play-btn');
+        const secretTrigger = document.getElementById('secret-trigger');
+
+        // FLUJO 1: Partida Normal (Infinita, para que tú falles a propósito)
+        playBtn.addEventListener('click', () => {
+            isSurpriseMode = false;
+            startGame();
+        });
+
+        // FLUJO 2: Partida Trucada (Para cuando le pasas el móvil)
+        secretTrigger.addEventListener('click', () => {
+            isSurpriseMode = true;
+            
+            // Chivato visual: El texto parpadea en blanco rápido para confirmarte que el truco está activo
+            secretTrigger.style.color = "white";
+            setTimeout(() => {
+                secretTrigger.style.color = "#666";
+                startGame();
+            }, 150);
+        });
+
+        function startGame() {
+            score = 0;
+            scoreDisplay.textContent = score;
+            startScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+            spawnTarget();
+        }
+
+        function spawnTarget() {
+            clearTimeout(targetTimeout);
+
+            // Calcular posición aleatoria segura (evitando los bordes exactos)
+            const safeMargin = 80; 
+            const maxX = window.innerWidth - safeMargin;
+            const maxY = window.innerHeight - safeMargin;
+
+            const randomX = Math.floor(Math.random() * (maxX - 20)) + 10;
+            const randomY = Math.floor(Math.random() * (maxY - 100)) + 90; // Evita que aparezca sobre el contador de puntos
+
+            target.style.left = randomX + 'px';
+            target.style.top = randomY + 'px';
+
+            // Si el jugador no toca el círculo en 1.2 segundos, desaparece y el juego termina
+            targetTimeout = setTimeout(() => {
+                endGame();
+            }, 1200);
+        }
+
+        // Detectar toque en el círculo (soporte táctil nativo)
+        target.addEventListener('touchstart', (e) => {
+            e.preventDefault(); 
+            handleTap();
+        });
+
+        function handleTap() {
+            score++;
+            scoreDisplay.textContent = score;
+            
+            // LÓGICA DE LA SORPRESA: Si activaste el truco y ella llega a 10 puntos
+            if (isSurpriseMode && score >= 10) {
+                clearTimeout(targetTimeout);
+                triggerSurprise();
+            } else {
+                // Siguiente ronda
+                spawnTarget();
+            }
+        }
+
+        function endGame() {
+            clearTimeout(targetTimeout);
+            // Vuelve a la pantalla de inicio
+            gameScreen.classList.remove('active');
+            startScreen.classList.add('active');
+        }
+
+        function triggerSurprise() {
+            gameScreen.classList.remove('active');
+            surpriseScreen.classList.add('active');
+            launchConfetti();
+        }
+
+        // Generador de confeti nativo
+        function launchConfetti() {
+            const colors = ['#FFC700', '#FF0000', '#2E3192', '#41BBC7', '#00FF00'];
+            for (let i = 0; i < 80; i++) {
+                let confeti = document.createElement('div');
+                confeti.classList.add('confetti');
+                confeti.style.left = Math.random() * 100 + 'vw';
+                confeti.style.top = -20 + 'px';
+                confeti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Variación en tamaño y caída
+                let size = Math.random() * 8 + 6;
+                confeti.style.width = size + 'px';
+                confeti.style.height = size + 'px';
+                confeti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                confeti.style.animationDelay = (Math.random() * 1) + 's';
+                
+                document.body.appendChild(confeti);
+            }
+        }
+    </script>
+</body>
+</html>
