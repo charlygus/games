@@ -45,6 +45,7 @@
             display: flex;
         }
 
+        /* --- Pantalla 1: Inicio --- */
         #start-screen h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
@@ -68,6 +69,7 @@
             cursor: pointer;
         }
 
+        /* --- Pantalla 2: Juego --- */
         #score-display {
             position: absolute;
             top: 60px;
@@ -76,6 +78,24 @@
             color: rgba(255, 255, 255, 0.3);
             pointer-events: none;
         }
+        
+        /* Mensaje de espera antes de empezar */
+        #start-hint {
+            position: absolute;
+            top: 30%;
+            font-size: 1.2rem;
+            color: #ffd700;
+            text-align: center;
+            pointer-events: none;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
         #target {
             width: 70px;
             height: 70px;
@@ -90,6 +110,7 @@
             transform: scale(0.8);
         }
 
+        /* --- Pantalla 3: Sorpresa --- */
         #surprise-screen {
             background-color: #000;
             z-index: 10;
@@ -115,6 +136,7 @@
             color: #eee;
         }
 
+        /* Confeti CSS */
         .confetti {
             position: absolute;
             width: 10px;
@@ -128,6 +150,8 @@
 </head>
 <body>
 
+    <audio id="birthday-song" src="cancion.mp3" preload="auto"></audio>
+
     <div id="start-screen" class="screen active">
         <h1>Atrapa el<br>Círculo</h1>
         
@@ -138,6 +162,7 @@
 
     <div id="game-screen" class="screen">
         <div id="score-display">0</div>
+        <div id="start-hint">Toca el círculo para empezar</div>
         <div id="target"></div>
     </div>
 
@@ -148,10 +173,13 @@
     </div>
 
     <script>
+        // Variables de estado
         let score = 0;
         let isSurpriseMode = false;
+        let isGameActive = false; // Nueva variable para controlar la pausa inicial
         let targetTimeout;
 
+        // Elementos del DOM
         const startScreen = document.getElementById('start-screen');
         const gameScreen = document.getElementById('game-screen');
         const surpriseScreen = document.getElementById('surprise-screen');
@@ -159,11 +187,13 @@
         const scoreDisplay = document.getElementById('score-display');
         const playBtn = document.getElementById('play-btn');
         const secretTrigger = document.getElementById('secret-trigger');
+        const song = document.getElementById('birthday-song');
+        const startHint = document.getElementById('start-hint');
 
         // Partida normal (Juegas tú)
         playBtn.addEventListener('click', () => {
             isSurpriseMode = false;
-            startGame();
+            initGameReadyState();
         });
 
         // Partida trucada (Juega ella)
@@ -172,18 +202,31 @@
             secretTrigger.style.color = "white";
             setTimeout(() => {
                 secretTrigger.style.color = "#666";
-                startGame();
+                initGameReadyState();
             }, 150);
         });
 
-        function startGame() {
+        // Prepara el tablero pero NO arranca el tiempo aún
+        function initGameReadyState() {
+            song.pause();
+            song.currentTime = 0;
+            
             score = 0;
             scoreDisplay.textContent = score;
+            isGameActive = false;
+            
+            // Mostrar texto de ayuda
+            startHint.style.display = 'block';
+            
             startScreen.classList.remove('active');
             gameScreen.classList.add('active');
-            spawnTarget();
+            
+            // Colocar el círculo en el centro de la pantalla
+            target.style.left = 'calc(50% - 35px)';
+            target.style.top = 'calc(50% - 35px)';
         }
 
+        // Arranca el movimiento y el temporizador
         function spawnTarget() {
             clearTimeout(targetTimeout);
 
@@ -199,28 +242,31 @@
 
             targetTimeout = setTimeout(() => {
                 endGame();
-            }, 1200);
+            }, 1200); // 1.2 segundos para atrapar el círculo
         }
 
-        // Detecta el clic del ratón (PC)
-        target.addEventListener('mousedown', (e) => {
-            e.preventDefault(); 
-            handleTap();
-        });
-
-        // Detecta el toque del dedo (Móvil)
-        target.addEventListener('touchstart', (e) => {
-            e.preventDefault(); 
-            handleTap();
-        });
+        // Eventos de interacción
+        target.addEventListener('mousedown', (e) => { e.preventDefault(); handleTap(); });
+        target.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(); });
 
         function handleTap() {
+            // Si el juego estaba pausado esperando el primer toque, arranca ahora
+            if (!isGameActive) {
+                isGameActive = true;
+                startHint.style.display = 'none'; // Ocultar el texto
+                score = 1;
+                scoreDisplay.textContent = score;
+                spawnTarget();
+                return;
+            }
+
             score++;
             scoreDisplay.textContent = score;
             
-            // Si llega a 10 puntos en modo trampa, salta la sorpresa
+            // Lógica de sorpresa en el toque 10
             if (isSurpriseMode && score >= 10) {
                 clearTimeout(targetTimeout);
+                song.play(); // El audio arranca gracias al toque físico
                 triggerSurprise();
             } else {
                 spawnTarget();
@@ -229,6 +275,7 @@
 
         function endGame() {
             clearTimeout(targetTimeout);
+            isGameActive = false;
             gameScreen.classList.remove('active');
             startScreen.classList.add('active');
         }
