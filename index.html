@@ -48,8 +48,9 @@
 
         /* --- Pantalla 1: Inicio --- */
         #start-screen h1 {
-            font-size: 3rem;
+            font-size: 3.5rem;
             margin-bottom: 10px;
+            font-weight: 800;
         }
         #secret-trigger {
             color: #666;
@@ -57,6 +58,8 @@
             margin-bottom: 50px;
             padding: 20px;
             cursor: pointer;
+            transition: color 0.3s;
+            font-weight: bold;
         }
         .btn {
             background-color: #007aff;
@@ -68,25 +71,42 @@
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4);
+            margin-bottom: 15px;
+            width: 80%;
+            max-width: 300px;
         }
         .btn:active {
             transform: scale(0.95);
         }
+        .btn-secondary {
+            background-color: #333;
+            box-shadow: none;
+            font-size: 1.2rem;
+            padding: 12px 40px;
+        }
 
         /* --- Pantalla 2: Juego --- */
+        #level-display {
+            position: absolute;
+            top: 30px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+            pointer-events: none;
+        }
         #score-display {
             position: absolute;
-            top: 60px;
-            font-size: 3.5rem;
+            top: 70px;
+            font-size: 4rem;
             font-weight: bold;
-            color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.2);
             pointer-events: none;
         }
         #start-hint {
             position: absolute;
             top: 25%;
             font-size: 1.2rem;
-            color: #ffd700;
+            color: #fff;
             pointer-events: none;
             animation: pulse 1.5s infinite;
         }
@@ -103,11 +123,13 @@
             position: absolute;
             box-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
             cursor: pointer;
+            /* Evita el zoom accidental al tocar rápido en móviles */
+            touch-action: none; 
         }
 
-        /* --- Pantalla 3: Game Over (Derrota normal) --- */
+        /* --- Pantalla 3: Game Over --- */
         #game-over-screen h2 {
-            font-size: 2.5rem;
+            font-size: 2.8rem;
             color: #ff3b30;
             margin-bottom: 10px;
         }
@@ -117,13 +139,13 @@
             margin-bottom: 40px;
         }
 
-        /* --- Pantalla 4: Sorpresa (Neón y Música) --- */
+        /* --- Pantalla 4: Sorpresa (Neón) --- */
         #surprise-screen {
             background-color: #050505;
             z-index: 10;
         }
         .neon-title {
-            font-size: 3rem;
+            font-size: 3.2rem;
             font-weight: 900;
             color: #fff;
             text-transform: uppercase;
@@ -138,16 +160,16 @@
             animation: neon-pulse 1.5s infinite alternate;
         }
         .neon-subtitle {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: bold;
             color: #ffd700;
             margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
         }
         .neon-date {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             color: #00ffff;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
         }
         @keyframes neon-pulse {
             from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00de, 0 0 40px #ff00de; }
@@ -178,6 +200,7 @@
     </div>
 
     <div id="game-screen" class="screen">
+        <div id="level-display">Nivel: Sencillo</div>
         <div id="score-display">0</div>
         <div id="start-hint">Toca el círculo para empezar</div>
         <div id="target"></div>
@@ -187,6 +210,7 @@
         <h2>¡Tiempo Agotado!</h2>
         <div id="game-over-score">Puntuación: 0</div>
         <button id="retry-btn" class="btn">Reintentar</button>
+        <button id="menu-btn" class="btn btn-secondary">Volver al Menú</button>
     </div>
 
     <div id="surprise-screen" class="screen">
@@ -196,65 +220,62 @@
     </div>
 
     <script>
-        // Variables de estado
+        // Variables
         let score = 0;
         let isSurpriseMode = false;
         let isGameActive = false;
         let targetTimeout;
-        let audioUnlocked = false; // Para engañar al iPhone con el sonido
+        let audioUnlocked = false;
 
-        // Elementos del DOM
+        // Elementos DOM
         const startScreen = document.getElementById('start-screen');
         const gameScreen = document.getElementById('game-screen');
         const gameOverScreen = document.getElementById('game-over-screen');
         const surpriseScreen = document.getElementById('surprise-screen');
         const target = document.getElementById('target');
         const scoreDisplay = document.getElementById('score-display');
+        const levelDisplay = document.getElementById('level-display');
         const finalScoreDisplay = document.getElementById('game-over-score');
         const playBtn = document.getElementById('play-btn');
         const retryBtn = document.getElementById('retry-btn');
+        const menuBtn = document.getElementById('menu-btn');
         const secretTrigger = document.getElementById('secret-trigger');
         const song = document.getElementById('birthday-song');
         const startHint = document.getElementById('start-hint');
 
-        // Eventos Botones Menú
-        playBtn.addEventListener('click', () => {
-            isSurpriseMode = false;
-            initGameReadyState();
-        });
-
-        retryBtn.addEventListener('click', () => {
-            // Reintentar mantiene el modo en el que estábamos (trampa o normal)
-            initGameReadyState();
-        });
-
-        // Evento Truco (Armar la trampa)
+        // BOTÓN TRUCO: Activa/Desactiva el modo y se pone Rojo
         secretTrigger.addEventListener('click', () => {
-            isSurpriseMode = true;
-            secretTrigger.style.color = "white"; // Chivato visual
-            setTimeout(() => {
-                secretTrigger.style.color = "#666";
-                initGameReadyState();
-            }, 150);
+            isSurpriseMode = !isSurpriseMode;
+            secretTrigger.style.color = isSurpriseMode ? "#ff3b30" : "#666";
         });
 
+        // BOTONES DE MENÚ
+        playBtn.addEventListener('click', initGameReadyState);
+        retryBtn.addEventListener('click', initGameReadyState);
+        
+        menuBtn.addEventListener('click', () => {
+            gameOverScreen.classList.remove('active');
+            startScreen.classList.add('active');
+        });
+
+        // Preparar la partida
         function initGameReadyState() {
             song.pause();
             song.currentTime = 0;
             
             score = 0;
             scoreDisplay.textContent = score;
+            levelDisplay.textContent = "Nivel: Sencillo";
+            levelDisplay.style.color = "#ffd700";
             isGameActive = false;
             
             startHint.style.display = 'block';
             
-            // Ocultar todas las pantallas y mostrar solo el juego
             startScreen.classList.remove('active');
             gameOverScreen.classList.remove('active');
             surpriseScreen.classList.remove('active');
             gameScreen.classList.add('active');
             
-            // Círculo al centro
             target.style.left = 'calc(50% - 35px)';
             target.style.top = 'calc(50% - 35px)';
         }
@@ -262,40 +283,57 @@
         function spawnTarget() {
             clearTimeout(targetTimeout);
 
-            const safeMargin = 80; 
-            const maxX = window.innerWidth - safeMargin;
-            const maxY = window.innerHeight - safeMargin;
+            // Evitar bordes y textos
+            const safeMarginX = 80; 
+            const safeMarginY = 120;
+            const maxX = window.innerWidth - safeMarginX;
+            const maxY = window.innerHeight - safeMarginY;
 
             const randomX = Math.floor(Math.random() * (maxX - 20)) + 10;
-            const randomY = Math.floor(Math.random() * (maxY - 100)) + 90; 
+            const randomY = Math.floor(Math.random() * (maxY - 100)) + 100; 
 
             target.style.left = randomX + 'px';
             target.style.top = randomY + 'px';
 
-            // LÓGICA DE VELOCIDAD
-            // Si el truco está activo y llega a 12 puntos, la velocidad es imposible (400ms)
-            let speed = 1200; 
-            if (isSurpriseMode && score >= 12) {
-                speed = 400; // Imposible atraparlo
+            // LÓGICA DE NIVELES Y VELOCIDAD
+            let speed = 1500; // Por defecto Sencillo
+
+            if (score <= 7) {
+                levelDisplay.textContent = "Nivel: Sencillo";
+                levelDisplay.style.color = "#00ff00";
+                speed = 1500;
+            } else if (score <= 15) {
+                levelDisplay.textContent = "Nivel: Medio";
+                levelDisplay.style.color = "#ffd700";
+                speed = 1300;
+            } else if (score <= 24) {
+                levelDisplay.textContent = "Nivel: Extremo";
+                levelDisplay.style.color = "#ff8c00";
+                speed = 1100;
+            } else {
+                levelDisplay.textContent = "Nivel: Imposible";
+                levelDisplay.style.color = "#ff3b30";
+                // Si la trampa está activa y llegamos al 25, la velocidad es 0.3s
+                if (isSurpriseMode) {
+                    speed = 300;
+                } else {
+                    speed = 900; // Por si tú juegas en modo normal y pasas del 25
+                }
             }
 
-            // Cuando se agota el tiempo, salta el Game Over o la Sorpresa
-            targetTimeout = setTimeout(() => {
-                handleTimeout();
-            }, speed);
+            targetTimeout = setTimeout(handleTimeout, speed);
         }
 
-        // Interacción con el círculo
+        // Interacción con el círculo (Cubre ratón y táctil)
         target.addEventListener('mousedown', (e) => { e.preventDefault(); handleTap(); });
         target.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(); });
 
         function handleTap() {
-            // Primer toque: Arrancar juego y desbloquear audio en iPhone
+            // Primer toque: Arranca tiempo y desbloquea el canal de audio para iOS
             if (!isGameActive) {
                 isGameActive = true;
                 startHint.style.display = 'none';
                 
-                // Truco de iOS: Reproducir y pausar audio rápido en el primer toque
                 if (!audioUnlocked) {
                     song.play().then(() => {
                         song.pause();
@@ -312,18 +350,23 @@
 
             score++;
             scoreDisplay.textContent = score;
+
+            // DETONANTE: Toca el círculo 25 y armamos el audio para la sorpresa
+            if (isSurpriseMode && score === 25) {
+                song.volume = 1.0;
+                song.play().catch(e => console.log("Audio bloqueado", e));
+            }
+
             spawnTarget();
         }
 
-        // Qué pasa cuando se agota el tiempo del círculo
         function handleTimeout() {
             isGameActive = false;
             
-            // Si estaba la trampa armada y perdió en el nivel súper rápido (>= 12)
-            if (isSurpriseMode && score >= 12) {
+            // Si la trampa está armada y perdió en el círculo rápido (25 puntos logrados)
+            if (isSurpriseMode && score >= 25) {
                 triggerSurprise();
             } else {
-                // Si perdió de forma natural (antes del 12)
                 showGameOver();
             }
         }
@@ -338,14 +381,18 @@
             gameScreen.classList.remove('active');
             surpriseScreen.classList.add('active');
             
-            // Lanza la canción y el confeti
-            song.play().catch(e => console.log("Audio no pudo iniciar", e));
+            // Por si el audio falló al tocar el 25, forzamos un segundo intento de Play
+            if (song.paused) {
+                song.volume = 1.0;
+                song.play().catch(e => console.log("Audio falló", e));
+            }
+            
             launchConfetti();
         }
 
         function launchConfetti() {
             const colors = ['#FFC700', '#FF0000', '#2E3192', '#41BBC7', '#00FF00', '#ff00de'];
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 120; i++) {
                 let confeti = document.createElement('div');
                 confeti.classList.add('confetti');
                 confeti.style.left = Math.random() * 100 + 'vw';
