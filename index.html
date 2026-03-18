@@ -275,7 +275,7 @@
         let isGameActive = false;
         let targetTimeout;
         let audioUnlocked = false;
-        let isTransitioning = false; // Evita que se toquen botones durante el fundido
+        let isTransitioning = false; 
 
         // Elementos DOM
         const startScreen = document.getElementById('start-screen');
@@ -345,14 +345,13 @@
 
             // CÁLCULO SEGURO DE MÁRGENES (Evita la isla dinámica y bordes)
             const targetSize = 70;
-            const safeMarginTop = 160; // Deja espacio para los textos de puntuación
-            const safeMarginBottom = 60; // Deja espacio para la barra home de iOS
-            const safeMarginX = 20; // Margen lateral
+            const safeMarginTop = 160; 
+            const safeMarginBottom = 60; 
+            const safeMarginX = 20; 
 
             const maxX = window.innerWidth - targetSize - safeMarginX;
             const maxY = window.innerHeight - targetSize - safeMarginBottom;
 
-            // Math.max asegura que nunca sea menor que el margen seguro
             const randomX = Math.max(safeMarginX, Math.floor(Math.random() * maxX));
             const randomY = Math.max(safeMarginTop, Math.floor(Math.random() * maxY));
 
@@ -379,7 +378,7 @@
                 levelDisplay.style.color = "#ff3b30";
                 
                 if (isSurpriseMode) {
-                    speed = 200; // Súper rápido para forzar el fallo
+                    speed = 200; 
                 } else {
                     speed = 900; 
                 }
@@ -388,10 +387,9 @@
             targetTimeout = setTimeout(handleTimeout, speed);
         }
 
-        // Interacción unificada y bloqueada para evitar comportamientos raros
         target.addEventListener('pointerdown', (e) => { 
             e.preventDefault(); 
-            e.stopPropagation(); // Evita que el evento "burbujee" al fondo
+            e.stopPropagation(); 
             handleTap(); 
         });
 
@@ -400,9 +398,9 @@
                 isGameActive = true;
                 startHint.style.display = 'none';
                 
-                // BLINDAJE DE AUDIO: Truco de volumen 0 para que no se escuche NADA
+                // BLINDAJE DE AUDIO iOS: Usamos mute para que el desbloqueo sea 100% silencioso
                 if (!audioUnlocked) {
-                    song.volume = 0; 
+                    song.muted = true; 
                     song.play().then(() => {
                         song.pause();
                         song.currentTime = 0;
@@ -424,7 +422,6 @@
         function handleTimeout() {
             isGameActive = false;
             
-            // Condición estricta: Solo salta si tiene el modo trampa Y ha llegado a 25
             if (isSurpriseMode && score >= 25) {
                 triggerSurprise();
             } else {
@@ -440,15 +437,13 @@
         }
 
         function triggerSurprise() {
-            isTransitioning = true; // Bloquea los botones de reintentar
+            isTransitioning = true; 
             
-            // 1. Mostrar Game Over falso
             gameScreen.classList.remove('active');
             finalScoreDisplay.textContent = "Puntuación: " + score;
             gameOverScreen.style.opacity = '1';
             gameOverScreen.classList.add('active');
 
-            // 2. Esperar y fundir a negro
             setTimeout(() => {
                 gameOverScreen.style.opacity = '0';
                 
@@ -456,17 +451,20 @@
                     gameOverScreen.classList.remove('active');
                     surpriseScreen.classList.add('active');
                     
-                    // 3. Aparece la tarjeta elegante y AQUÍ le damos volumen a Morat
                     setTimeout(() => {
                         surpriseScreen.classList.add('visible');
-                        song.volume = 1.0; // Le devolvemos la voz
+                        
+                        // DEVOLVEMOS EL SONIDO: Quitamos el mute para que suene la sorpresa
+                        song.muted = false; 
+                        song.volume = 1.0; 
                         song.play().catch(e => console.log("El audio falló:", e));
+                        
                         launchConfetti();
                     }, 50);
                     
-                }, 1000); // Duración del fundido a negro
+                }, 1000); 
                 
-            }, 2500); // Tiempo que ve la pantalla de Game Over antes de la magia
+            }, 2500); 
         }
 
         function launchConfetti() {
